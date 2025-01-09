@@ -14,11 +14,10 @@ import requests
 import re
 from requests.exceptions import RequestException
 from bs4 import BeautifulSoup
-
 #Chrome Options
 chromeOptions = Options()
 chromeOptions.add_argument("--start-maximized")
-chromeOptions.add_argument("--headless")
+#chromeOptions.add_argument("--headless")
 chromeOptions.add_argument("--no-sandbox")
 chromeOptions.add_argument("--disable-dev-shm-usage")
 chromeOptions.add_argument("--log-level=3")
@@ -27,7 +26,10 @@ chromeOptions.add_argument("--log-level=3")
 webdriverService = Service(ChromeDriverManager().install())
 #Set up
 driver = webdriver.Chrome(service=webdriverService,options= chromeOptions)
-search_text = "yazılım" #Keyword to search
+
+search_text = input("Enter a keyword to search")
+
+
 
 def go_to_maps():
     driver.get("https://www.google.com/maps")
@@ -63,14 +65,26 @@ def extract_email_from_website(website):
         response = requests.get(website, timeout=5)
         if response.status_code == 200:
             emails = re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', response.text)
-            return emails if emails else "No email found"
+            return emails if emails else ["No email found"]
         else:
-            return "Failed to fetch website"
+            return ["Failed to fetch website"]
     except RequestException:
-        return "Error accessing website"
+        return ["Error accessing website"]
 
-
-data_containers = soup.find_all("div", class_="Nv2PK tH5CWc THOPZb")
+#because google sometimes changes classname's
+possible_classes = [
+    "Nv2PK tH5CWc THOPZb",
+    "Nv2PK THOPZb CpccDe",
+    "Nv2PK Q2HXcd THOPZb"
+]
+data_containers = None
+for class_name in possible_classes:
+    data_containers = soup.find_all("div", class_=class_name)
+    if data_containers:
+        print(f"Class found: {class_name}")
+        break
+if not data_containers:
+    print("No matching data containers found. Check the class names or the page structure.")
 results = []
 def scrape_data():
     for container in data_containers:
@@ -94,7 +108,7 @@ def scrape_data():
         if website != "No Website":
             emails = extract_email_from_website(website)
         else:
-            emails = "No website to extract email"
+            emails = ["No website to extract email"]
         
         results.append({"name": name, "ratings": ratings, "comments" : comments,"website":website, "phone number": phoneNumber , "emails" : ", ".join(emails)})
 #scrape that address
