@@ -10,6 +10,9 @@ from selenium.webdriver.common.actions.wheel_input import ScrollOrigin
 from selenium.webdriver.support import expected_conditions as EC
 import time
 import pandas as pd
+import requests
+import re
+from requests.exceptions import RequestException
 from bs4 import BeautifulSoup
 
 #Chrome Options
@@ -55,6 +58,17 @@ pageSource = driver.page_source
 
 soup = BeautifulSoup(pageSource,"html.parser")
 
+def extract_email_from_website(website):
+    try:
+        response = requests.get(website, timeout=5)
+        if response.status_code == 200:
+            emails = re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', response.text)
+            return emails if emails else "No email found"
+        else:
+            return "Failed to fetch website"
+    except RequestException:
+        return "Error accessing website"
+
 
 data_containers = soup.find_all("div", class_="Nv2PK tH5CWc THOPZb")
 results = []
@@ -73,12 +87,16 @@ def scrape_data():
             website = container.find("a",{"class":"lcr4fd S9kvJb"}).get("href")
         except AttributeError:
             website = "No Website"
-
         try:
             phoneNumber = container.find("span", class_="UsdlK").text
         except AttributeError:
             phoneNumber = "No phone number"
-        results.append({"name": name, "ratings": ratings, "comments" : comments,"website":website, "phone number": phoneNumber})
+        if website != "No Website":
+            emails = extract_email_from_website(website)
+        else:
+            emails = "No website to extract email"
+        
+        results.append({"name": name, "ratings": ratings, "comments" : comments,"website":website, "phone number": phoneNumber , "emails" : ", ".join(emails)})
 #scrape that address
 def scrape_address():
     data_container = driver.find_elements(By.CLASS_NAME , "hfpxzc")
